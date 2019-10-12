@@ -44,3 +44,15 @@ $ kubectl exec -it pod/jenkins-7cfc969f86-mjbm6 -- cat /var/jenkins_home/secrets
 cbdd57531af340ab8f2545235fc22942
 ```
 
+And after you have login with admin you should be able to access:
+
+<img width="1278" alt="image" src="https://user-images.githubusercontent.com/567298/66704860-4c848380-ed20-11e9-89b5-efebb718589f.png">
+
+
+## Cleanup
+
+Remove the cluster:
+
+```
+$ k3d delete --name kubernetes
+```
