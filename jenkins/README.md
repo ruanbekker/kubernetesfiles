@@ -14,6 +14,9 @@ Deploy:
 
 ```
 $ kubectl apply -f app.yml
+service/jenkins created
+service/jenkins-service created
+deployment.apps/jenkins created
 ```
 
 View the deployment:
