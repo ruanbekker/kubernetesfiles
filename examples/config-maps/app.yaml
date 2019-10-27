@@ -5,9 +5,8 @@ metadata:
   namespace: default
 data:
   script.sh: |
-    #!/bin/sh
     while true
-    do 
+    do
       echo "test"
       sleep 1
     done
@@ -20,8 +19,8 @@ spec:
   containers:
     - name: demo
       image: busybox
-      command:
-      - sh /app/script.sh
+      command: ["/bin/sh"]
+      args: ["/app/script.sh"]
       volumeMounts:
       - name: config-volume
         mountPath: /app/script.sh
