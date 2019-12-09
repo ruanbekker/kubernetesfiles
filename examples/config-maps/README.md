@@ -1,4 +1,6 @@
 
+## Config Maps
+
 Create a kubernetes cluster:
 
 ```
@@ -40,3 +42,6 @@ Delete kubernetes cluster:
 ```
 $ k3d delete --name demo
 ```
+
+## More on Config Maps:
+- [Create a Config Map from Env Vars in a File](https://gist.github.com/ruanbekker/a872666cade6aec79bffebea163ea981)
