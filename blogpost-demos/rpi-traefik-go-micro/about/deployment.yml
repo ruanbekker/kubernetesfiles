@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-micro-about
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-micro-about
+  template:
+    metadata:
+      labels:
+        app: go-micro-about
+    spec:
+      containers:
+      - name: go-micro-about
+        image: ruanbekker/rpi-go-micro:about-us
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-micro-about-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    targetPort: 8000
+    port: 80
+  selector:
+    app: go-micro-about
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: go-micro-about-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+
+spec:
+  rules:
+  - host: rpi-05.ruan.local
+    http:
+      paths:
+      - path: /about
+        backend:
+          serviceName: go-micro-about-service
+          servicePort: http
