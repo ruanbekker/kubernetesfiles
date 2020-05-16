@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-micro-contact
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-micro-contact
+  template:
+    metadata:
+      labels:
+        app: go-micro-contact
+    spec:
+      containers:
+      - name: go-micro-contact
+        image: ruanbekker/rpi-go-micro:contact-us
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-micro-contact-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    targetPort: 8000
+    port: 80
+  selector:
+    app: go-micro-contact
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: go-micro-contact-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+
+spec:
+  rules:
+  - host: rpi-05.ruan.local
+    http:
+      paths:
+      - path: /contact
+        backend:
+          serviceName: go-micro-contact-service
+          servicePort: http
