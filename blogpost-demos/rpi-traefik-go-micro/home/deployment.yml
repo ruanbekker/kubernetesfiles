@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-micro-home
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-micro-home
+  template:
+    metadata:
+      labels:
+        app: go-micro-home
+    spec:
+      containers:
+      - name: go-micro-home
+        image: ruanbekker/rpi-go-micro:home
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-micro-home-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    targetPort: 8000
+    port: 80
+  selector:
+    app: go-micro-home
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: go-micro-home-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+
+spec:
+  rules:
+  - host: rpi-05.ruan.local
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: go-micro-home-service
+          servicePort: http
