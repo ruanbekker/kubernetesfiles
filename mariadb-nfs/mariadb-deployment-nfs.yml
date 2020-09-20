@@ -1,0 +1,93 @@
+# pre-requirements:
+# nfs server with existing path:
+# https://blog.ruanbekker.com/blog/2017/12/05/setup-a-nfs-server-on-a-raspberrypi/
+# or:
+# docker run -itd --privileged -e SHARED_DIRECTORY=/data -v /data/kubernetes-volumes:/data -p 2049:2049 itsthenetwork/nfs-server-alpine:12
+# mkdir -p /data/kubernetes-volumes/mariadb
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mariadb-pv
+  namespace: databases
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  nfs:
+    path: /mariadb
+    server: 192.168.0.250
+  persistentVolumeReclaimPolicy: Retain
+  claimRef:
+    namespace: databases
+    name: mariadb-pvc
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mariadb-pvc
+  namespace: databases
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: mariadb
+  namespace: databases
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:10.3
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              value: testdb
+            - name: MYSQL_USER
+              value: test
+            - name: MYSQL_PASSWORD
+              value: test
+            - name: MYSQL_RANDOM_ROOT_PASSWORD
+              value: yes
+          volumeMounts:
+            - mountPath: /var/lib/mysql/
+              name: database
+          resources:
+            limits:
+              cpu: '2'
+              memory: '512Mi'
+            requests:
+              cpu: '500m'
+              memory: '256Mi'
+      volumes:
+        - name: database
+          persistentVolumeClaim:
+            claimName: mariadb-pvc
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: mariadb
+  namespace: databases
+spec:
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+    app: mariadb
