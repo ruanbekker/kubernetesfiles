@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: blog-pv-local
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  persistentVolumeReclaimPolicy: Retain
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/home/pi/volumes/ghost"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: blog-pvc-local
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blog-config-js-cm
+data:
+  config.js: |
+    var path = require('path'),
+    config;
+    config = {
+        production: {
+            url: 'https://blog.example.com',
+            mail: {},
+            database: {
+                client: 'sqlite3',
+                connection: {
+                    filename: path.join(__dirname, '/content/data/ghost.db')
+                },
+                debug: false
+            },
+
+            server: {
+                host: '0.0.0.0',
+                port: '2368'
+            }
+        },
+    };
+    module.exports = config;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog
+  labels:
+    app: blog
+    category: blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blog
+  template:
+    metadata:
+      labels:
+        app: blog
+        category: blog
+    spec:
+      containers:
+      - name: ghost
+        image: alexellis2/ghost-on-docker:latest
+        env:
+        - name: NODE_ENV
+          value: production
+        ports:
+        - containerPort: 2368
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 50Mi
+        volumeMounts:
+        - name: blog-vol
+          mountPath: /var/www/ghost/content/data
+        - name: blog-config-js-cm-vol
+          mountPath: /var/www/ghost/config.js
+          subPath: config.js
+          readOnly: true
+      volumes:
+      - name: blog-vol
+        persistentVolumeClaim:
+          claimName: blog-pvc-local
+      # https://medium.com/swlh/quick-fix-mounting-a-configmap-to-an-existing-volume-in-kubernetes-using-rancher-d01c472a10ad
+      - configMap:
+          items:
+          - key: config.js
+            path: config.js
+          name: blog-config-js-cm
+        name: blog-config-js-cm-vol
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "k3s.io/hostname"
+                operator: In
+                values:
+                - "rpi-07"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blog
+  namespace: default
+spec:
+  ports:
+  - name: http
+    targetPort: 2368
+    port: 80
+  selector:
+    app: blog
+    category: blog
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: blog
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    ingress.kubernetes.io/ssl-redirect: "true"
+    traefik.backend.loadbalancer.stickiness: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - secretName: blog-example-com-tls
+      hosts:
+        - blog.example.com
+  rules:
+  - host: blog.example.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: blog
+          servicePort: http
