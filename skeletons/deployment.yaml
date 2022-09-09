@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: ruanbekker/containers:nginx
+        name: containers
+        ports:
+        - containerPort: 80
+        env:
+        - name: OWNER
+          value: "itsme"
+        - name: SECRET_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: username
+              optional: false
+        volumeMounts:
+        - name: foo
+          mountPath: /mnt/secrets 
+          readOnly: true
+          # ls /mnt/secrets
+          # password  username
+      volumes:
+      - name: foo
+        secret:
+          secretName: mysecret
+          optional: false
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: mysecret
+  namespace: default
+data:
+  username: YWRtaW4=      # echo -n "admin"    | base64 | pbcopy
+  password: cGFzc3dvcmQ=  # echo -n "password" | base64 | pbcopy
