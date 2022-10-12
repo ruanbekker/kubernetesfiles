@@ -1,0 +1,28 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: echo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      volumes:
+        - name: task-volume
+          persistentVolumeClaim:
+            claimName: task-pvc
+      containers:
+      - image: busybox
+        name: echo
+        volumeMounts:
+          - mountPath: "/data"
+            name: task-volume
+        command: ["ping", "127.0.0.1"]
