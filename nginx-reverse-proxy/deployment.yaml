@@ -1,0 +1,131 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tmp-current-config-cm
+  namespace: tmp-current
+data:
+  nginx.conf: |
+    user www-data;
+    worker_processes auto;
+    pid /run/nginx.pid;
+    events {
+        worker_connections 1024;
+    }
+    http {
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+        ssl_prefer_server_ciphers on;
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" "$http_x_forwarded_for"';
+        access_log  /var/log/nginx/access.log main;
+        error_log /var/log/nginx/error.log;
+        gzip on;
+        gzip_disable "msie6";
+        include /etc/nginx/conf.d/app.conf;
+    }
+  app.conf: |
+    upstream app {
+      server app.default.svc.cluster.local:80;
+      keepalive 15;
+    }
+    upstream static {
+      server static.default.svc.cluster.local:80;
+      keepalive 15;
+    }
+    server {
+      listen 80;
+      server_name _;
+      location /app {
+        proxy_pass http://app;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "Keep-Alive";
+        proxy_set_header Proxy-Connection "Keep-Alive";
+        proxy_set_header Host $host;
+        proxy_set_header X-Proxy-Forwarded-Port 443;
+        proxy_redirect off;
+      }
+      location ^~ /static {
+        proxy_pass http://static;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "Keep-Alive";
+        proxy_set_header Proxy-Connection "Keep-Alive";
+        proxy_set_header Host $host;
+        proxy_set_header X-Proxy-Forwarded-Port 443;
+        proxy_redirect off;
+      }
+    }
+  index.html: |
+    ok
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tmp-current-reverse-proxy
+  namespace: tmp-current
+  labels:
+    app: tmp-current-reverse-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tmp-current-reverse-proxy
+  template:
+    metadata:
+      labels:
+        app: tmp-current-reverse-proxy
+    spec:
+      containers:
+      - name: tmp-current-reverse-proxy
+        image: nginx
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            memory: 512Mi
+        volumeMounts:
+        - name: tmp-current-config-cm-vol
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: tmp-current-config-cm-vol
+          mountPath: /etc/nginx/conf.d/app.conf
+          subPath: app.conf
+          readOnly: true
+        - name: tmp-current-config-cm-vol
+          mountPath: /etc/nginx/html/index.html
+          subPath: index.html
+          readOnly: true
+      volumes:
+      # https://medium.com/swlh/quick-fix-mounting-a-configmap-to-an-existing-volume-in-kubernetes-using-rancher-d01c472a10ad
+      - configMap:
+          name: tmp-current-config-cm
+          items:
+          - key: nginx.conf
+            path: nginx.conf
+          - key: app.conf
+            path: app.conf
+          - key: index.html
+            path: index.html
+        name: tmp-current-config-cm-vol
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tmp-current-reverse-proxy
+  namespace: tmp-current
+spec:
+  ports:
+  - name: http
+    targetPort: 80
+    port: 80
+  selector:
+    app: tmp-current-reverse-proxy
