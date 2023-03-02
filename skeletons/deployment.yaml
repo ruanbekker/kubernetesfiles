@@ -13,6 +13,8 @@ spec:
   strategy: {}
   template:
     metadata:
+      annotations:
+        custom.annotation: "this-will-be-on-the-pods-aswell"
       labels:
         app: nginx
     spec:
