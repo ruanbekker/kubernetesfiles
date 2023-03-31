@@ -38,6 +38,28 @@ spec:
           readOnly: true
           # ls /mnt/secrets
           # password  username
+        startupProbe:
+          failureThreshold: 5
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP          
+        readinessProbe:
+          initialDelaySeconds: 1
+          periodSeconds: 2
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 1
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+            httpHeaders:
+              - name: Host
+                value: localhost
       volumes:
       - name: foo
         secret:
