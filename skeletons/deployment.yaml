@@ -22,7 +22,8 @@ spec:
       - image: ruanbekker/containers:nginx
         name: containers
         ports:
-        - containerPort: 80
+        - name: http
+          containerPort: 80
         env:
         - name: OWNER
           value: "itsme"
