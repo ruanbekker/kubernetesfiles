@@ -33,6 +33,13 @@ spec:
               name: mysecret
               key: username
               optional: false
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "1000m"
         volumeMounts:
         - name: foo
           mountPath: /mnt/secrets 
