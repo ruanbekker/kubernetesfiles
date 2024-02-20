@@ -1,0 +1,28 @@
+---
+# this wont place a pod on ip-10-4-12-216.eu-west-1.compute.internal
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: your-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: your-app
+  template:
+    metadata:
+      labels:
+        app: your-app
+    spec:
+      containers:
+      - name: your-container
+        image: your-image
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - ip-10-4-12-216.eu-west-1.compute.internal
