@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: hostname-app
+    image: ruanbekker/hostname
+    resources:
+      requests:
+        # the pod is requesting for 64MB of memory from the kubernetes scheduler.
+        # these requested resources are guaranteed to be available for the pod.
+        # if the node does not have 64MB available the pod will not run (or choses another node)
+        memory: "64Mi"
+        # the pod is requesting 250 milicores of a CPU (1/4 of a CPU core)
+        cpu: "250m"
+      limits:
+        # when the pod exceeds 128MB of memory the container gets terminated, 
+        # becuase memory cannot be throttled.
+        memory: "128Mi"
+        # when the pod exceeds 500 milicores of a CPU the container gets throttled
+        cpu: "500m"
